@@ -4,37 +4,77 @@ import (
 	"github.com/botogonia/flowbot"
 )
 
-func chatHandler3(ch *flowbot.Chat) {
+func pizzaChatHandler(ch *flowbot.Chat) {
 
 	defer ch.Close()
 
 	_, _ = ch.WaitUpdate()
 
-	chiceId1, data1 := ch.Choice(0,
-	//_, data1 := ch.Choice(0,
-		"Выберите кнопку",
+	startChoice, data := ch.Choice(0,
+		"Здесь можно заказать пиццу с доставкой",
 		&flowbot.Kbrd{
-			{{Text: "1", Data: "1"}, {Text: "2", Data: "2"}, {Text: "3", Data: "3"}},
-			{{Text: "4", Data: "4"}, {Text: "5", Data: "5"}, {Text: "6", Data: "6"}},
+			{{Text: "Заказать", Data: "order"}},
 		},
-		"Ожидается нажатие соответствующей кнопки",
+		"Чтобы заказать пиццу нажмите кнопку [Заказать]",
 	)
 
-	//ch.SendText("Вы выбрали: " + data1)
+	if data != "order" {
+		return
+	}
 
-	//_, txt := ch.Prompt(0,  "Введите текст","Ожидается ввод текста")
-	_, txt := ch.Prompt(chiceId1, "Вы выбрали: "+data1+"\nТеперь введите текст", "Ожидается ввод текста")
-	//ch.SendMsg(clb.Message.MessageID, "Вы выбрали: "+clb.Data, nil)
+	menuKbd := makeMenuKbrd(2)
 
-	//log.Println(runtime.NumGoroutine())
+	var cart []string
 
-	//txt := ch.WaitText("Ожидается ввод текста")
+menuChoice:
+	menuChoice, data := ch.Choice(startChoice,
+		"Выберите пиццу",
+		menuKbd,
+		"Для выбора пиццы нажмите соответствующую кнопку",
+	)
 
-	ch.SendText("вы ввели: " + txt)
+	cart = append(cart, data)
 
-	ch.SendText("Чат завершен")
+	addPizza, data := ch.Choice(menuChoice, cartList(cart),
 
-	//log.Println(runtime.NumGoroutine())
+		&flowbot.Kbrd{
+			{{Text: "Добавить еще пиццу", Data: "add"}},
+			{{Text: "Оформить заказ", Data: "order"}},
+		},
+		"",
+	)
 
-	//}
+	if data == "add" {
+		startChoice = addPizza
+		goto menuChoice
+	}
+
+	ch.SendText(addPizza, cartList(cart))
+
+	_, addr := ch.Prompt(0, "Укажите адрес доставки", "")
+
+	_, phone := ch.Prompt(0, "Укажите телефон для связи", "")
+
+	payChoice, payType := ch.Choice(0, "Оплата курьеру",
+		&flowbot.Kbrd{
+			{{Text: "Наличными", Data: "наличными"}, {Text: "Картой", Data: "картой"}},
+		},
+		"",
+	)
+
+	ch.SendText(payChoice, cartList(cart)+
+		"\n\nадрес доставки: "+addr+
+		"\nтелефон: "+phone+
+		"\nоплата: "+payType)
+
+	okChoice, data := ch.Choice(0, "Всё верно?", &flowbot.Kbrd{
+		{{Text: "Да, всё верно. Отправить заказ.", Data: "ok"}},
+	},
+		"",
+	)
+
+	if data == "ok" {
+		ch.SendText(okChoice, "Спасибо за заказ! \nОжидайте звонка оператора.")
+	}
+
 }
